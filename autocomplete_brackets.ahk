@@ -26,8 +26,8 @@ get_selection() {
 	clipwait 0.1
 	if not errorlevel
 		ret := clipboard
-	ClipSaved := ""
 	clipboard := ClipSaved
+	ClipSaved := ""
 	return ret
 }
 
@@ -51,9 +51,9 @@ wrap_selected_text(before, after, offset:=-100, length:=-1) {
 }
 
 end_is_present(bra, ket){
-	space := " "
+	space := "᠎"				; zero width space
 	Send %space%
-	move_cursor(1)
+	Send {Right}
 	Send +{Home}
 	str := get_selection()
 	Send {Right}
@@ -65,10 +65,10 @@ end_is_present(bra, ket){
 		Send {Backspace}
 		return false
 	}
-	Send {Left}{Backspace}
+	Send {Left}
+	Send {Backspace}
 	if (txt_arr[length] != ket)
 		return false
-	
 	counter := 0
 	Loop % length{
 		if (txt_arr[length - A_index - 1] == ket)
