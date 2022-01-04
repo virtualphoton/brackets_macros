@@ -5,16 +5,33 @@
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
+CLIPBOARD_TIMEOUT = 0.05
+RU_LANG_CODE := 0x4190419
+
+class Timer {
+	__New(){
+		this.last_time := A_TickCount
+	}
+	tick(){
+		this.last_time := A_TickCount
+	}
+	show_time(){
+		dt := A_TickCount - this.last_time
+		MsgBox %dt%
+		this.tick()
+	}
+}
+
 move_cursor(n) {
 	if (n < 0) {
 		n := -n
-		Send {Left %n%}
+		SendInput {Left %n%}
 	} else
-		Send {Right %n%}
+		SendInput {Right %n%}
 }
 
 print_and_move(str, n) {
-	Send %str%
+	SendInput %str%
 	move_cursor(n)
 }
 
@@ -22,8 +39,9 @@ get_selection() {
 	ClipSaved := ClipboardAll 			; save clipboard
 	clipboard := ""
 	ret := ""
-	Send ^c
-	clipwait 0.1
+	SendInput ^c
+	global CLIPBOARD_TIMEOUT
+	clipwait CLIPBOARD_TIMEOUT
 	if not errorlevel
 		ret := clipboard
 	clipboard := ClipSaved
@@ -37,36 +55,37 @@ wrap_selected_text(before, after, offset:=-100, length:=-1) {
 	if (length == -1)
 		length := StrLen(get_selection())
 	if (not length){
-		Send %before%%after%
+		SendInput %before%%after%
 		move_cursor(offset)
 	} else {
-		Send {Left}
-		Send %before%
+		SendInput {Left}
+		SendInput %before%
 		move_cursor(length)
-		Send %after%
+		SendInput %after%
 		move_cursor(offset)
-		Send +{Left %length%}		; select text again
+		SendInput +{Left %length%}		; select text again
 	}
 	return length
 }
 
 end_is_present(bra, ket){
 	space := "᠎"				; zero width space
-	Send %space%
-	Send {Right}
-	Send +{Home}
+	;space := " "
+	SendInput %space%
+	SendInput {Right}
+	SendInput +{Left}+{Home}			; because just SendInputing +{Home} bugs at the end of the line
 	str := get_selection()
-	Send {Right}
+	SendInput {Right}
 	
 	length := StrLen(str)
 	txt_arr := StrSplit(str)
 	
 	if (txt_arr[length] == space){
-		Send {Backspace}
+		SendInput {Backspace}
 		return false
 	}
-	Send {Left}
-	Send {Backspace}
+	SendInput {Left}
+	SendInput {Backspace}
 	if (txt_arr[length] != ket)
 		return false
 	counter := 0
@@ -75,7 +94,7 @@ end_is_present(bra, ket){
 			counter += 1
 		else if (txt_arr[length - A_index - 1] == bra)
 			counter -= 1
-		; Send %counter%		; debug
+		; SendInput %counter%		; debug
 		if (counter < 0)
 			return true
 	}
@@ -88,24 +107,80 @@ insert_end_bracket(bra, ket){
 	else {
 		if (ket == "}")
 			ket := "{}}"
-		Send %ket%
+		SendInput %ket%
 	}	
 }
+
+layout_is_good() {
+	; check if layout is not russian, because [, ], {, } and " are assigned to different characters there
+	ControlGetFocus Focused, A
+	ControlGet CtrlID, Hwnd,, % Focused, A
+	ThreadID := DllCall("GetWindowThreadProcessId", "Ptr", CtrlID, "Ptr", 0)
+	InputLocaleID := DllCall("GetKeyboardLayout", "UInt", ThreadID, "Ptr")
+	return InputLocaleID != RU_LANG_CODE 
+}
+
+class Mutex{
+	static counter := 0
+	__new(ms_wait:=100) {
+		this.ms_wait := ms_wait
+		this.mutex_name := "bracket_autocomplete_mutex_" Mutex.counter
+		
+		this.mutex_handle  := DllCall( "CreateMutex"
+		                            ,  Ptr, 0
+									,  Int, False
+									,  Str, this.mutex_name)
+	}
+	
+	__delete(){
+		DllCall("CloseHandle",  Ptr, this.mutex_handle)
+	}
+	
+	lock(signal:=False) {
+		while (True){
+			mutex_status := DllCall("WaitForSingleObject"
+									, Ptr, this.mutex_handle
+									, UInt, this.ms_wait)
+			if (signal)
+				MsgBox %mutex_status%
+			if (mutex_status == 0) 				; success
+				return 0
+			if (mutex_status == 258)				; WAIT_TIMEOUT
+				continue
+			return 1
+		}
+	}
+	unlock() {
+		return not DllCall("ReleaseMutex", Ptr, this.mutex_handle)
+	}
+}
+
+print_mutex := new Mutex()
 
 ^\::
 	wrap_selected_text("\(", "\)")
 	return
 
 $(::
+	global print_mutex
+	print_mutex.lock(True)
+	sleep 4000
 	wrap_selected_text("(", ")")
+	print_mutex.unlock()
 	return
 
 ${::
+	global print_mutex
+	print_mutex.lock()
 	wrap_selected_text("{{}", "{}}", -1)		; escaping '{' and '}'
+	print_mutex.unlock()
 	return
 	
 $[::
+	global print_mutex
+	print_mutex.lock()
 	wrap_selected_text("[", "]")
+	print_mutex.unlock()
 	return
 	
 $"::
@@ -113,11 +188,22 @@ $"::
 	return
 
 $)::
+	global print_mutex
+	print_mutex.lock(True)
 	insert_end_bracket("(", ")") 
+	print_mutex.unlock()
 	return
-:*:]::
+	
+$]::
+	global print_mutex
+	; print_mutex.lock()
 	insert_end_bracket("[", "]") 
+	; print_mutex.unlock()
 	return 
-:*:}::
+	
+$}::
+	global print_mutex
+	print_mutex.lock()
 	insert_end_bracket("{", "}") 
+	print_mutex.unlock()
 	return
