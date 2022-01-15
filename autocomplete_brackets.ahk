@@ -1,6 +1,4 @@
 ﻿#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
-#Warn  ; Enable warnings to assist with detecting common errors.
-#Warn LocalSameAsGlobal, Off
 #SingleInstance Force
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
@@ -30,16 +28,14 @@ move_cursor(n) {
 		SendInput {Right %n%}
 }
 
-print_and_move(str, n) {
-	SendInput %str%
-	move_cursor(n)
-}
-
-get_selection() {
+get_selection(cut:=false) {
 	ClipSaved := ClipboardAll 			; save clipboard
 	clipboard := ""
 	ret := ""
-	SendInput ^c
+	if (cut)
+		SendInput ^x
+	else
+		SendInput ^c
 	global CLIPBOARD_TIMEOUT
 	clipwait CLIPBOARD_TIMEOUT
 	if not errorlevel
@@ -53,7 +49,7 @@ wrap_selected_text(before, after, offset:=-100, length:=-1) {
 	if (offset == -100)
 		offset := -StrLen(after)
 	if (length == -1)
-		length := StrLen(get_selection())
+		length := StrLen(StrReplace(get_selection(), "`r"))
 	if (not length){
 		SendInput %before%%after%
 		move_cursor(offset)
@@ -113,6 +109,7 @@ insert_end_bracket(bra, ket){
 
 layout_is_good() {
 	; check if layout is not russian, because [, ], {, } and " are assigned to different characters there
+	global RU_LANG_CODE
 	ControlGetFocus Focused, A
 	ControlGet CtrlID, Hwnd,, % Focused, A
 	ThreadID := DllCall("GetWindowThreadProcessId", "Ptr", CtrlID, "Ptr", 0)
@@ -120,90 +117,94 @@ layout_is_good() {
 	return InputLocaleID != RU_LANG_CODE 
 }
 
-class Mutex{
-	static counter := 0
-	__new(ms_wait:=100) {
-		this.ms_wait := ms_wait
-		this.mutex_name := "bracket_autocomplete_mutex_" Mutex.counter
-		
-		this.mutex_handle  := DllCall( "CreateMutex"
-		                            ,  Ptr, 0
-									,  Int, False
-									,  Str, this.mutex_name)
-	}
-	
-	__delete(){
-		DllCall("CloseHandle",  Ptr, this.mutex_handle)
-	}
-	
-	lock(signal:=False) {
-		while (True){
-			mutex_status := DllCall("WaitForSingleObject"
-									, Ptr, this.mutex_handle
-									, UInt, this.ms_wait)
-			if (signal)
-				MsgBox %mutex_status%
-			if (mutex_status == 0) 				; success
-				return 0
-			if (mutex_status == 258)				; WAIT_TIMEOUT
-				continue
-			return 1
-		}
-	}
-	unlock() {
-		return not DllCall("ReleaseMutex", Ptr, this.mutex_handle)
-	}
-}
-
-print_mutex := new Mutex()
-
-^\::
-	wrap_selected_text("\(", "\)")
+$(::
+	wrap_selected_text("(", ")")
 	return
 
-$(::
-	global print_mutex
-	print_mutex.lock(True)
-	sleep 4000
-	wrap_selected_text("(", ")")
-	print_mutex.unlock()
+$|::
+	wrap_selected_text("|", "|")
 	return
 
 ${::
-	global print_mutex
-	print_mutex.lock()
-	wrap_selected_text("{{}", "{}}", -1)		; escaping '{' and '}'
-	print_mutex.unlock()
+	if layout_is_good()
+		wrap_selected_text("{{}", "{}}", -1)		; escaping '{' and '}'
+	else
+		Send Х
 	return
 	
 $[::
-	global print_mutex
-	print_mutex.lock()
-	wrap_selected_text("[", "]")
-	print_mutex.unlock()
+	if layout_is_good()
+		wrap_selected_text("[", "]")
+	else
+		Send х
 	return
 	
 $"::
-	wrap_selected_text("""", """")
+	if layout_is_good()
+		wrap_selected_text("""", """")
+	else
+		Send Э
 	return
 
 $)::
 	global print_mutex
-	print_mutex.lock(True)
+	
+	print_mutex.lock()
 	insert_end_bracket("(", ")") 
 	print_mutex.unlock()
 	return
 	
 $]::
-	global print_mutex
-	; print_mutex.lock()
-	insert_end_bracket("[", "]") 
-	; print_mutex.unlock()
+	if layout_is_good()
+		insert_end_bracket("[", "]") 
+	else
+		Send ъ
 	return 
 	
 $}::
-	global print_mutex
-	print_mutex.lock()
-	insert_end_bracket("{", "}") 
-	print_mutex.unlock()
+	if layout_is_good()
+		insert_end_bracket("{", "}")
+	else
+		Send Ъ
+	return
+
+; Anki
+^\::
+	wrap_selected_text("\(", "\)")
+	return
+
+:*:\rar::\Rightarrow
+::\v::\vec
+^[::
+	wrap_selected_text("\{{}", "\{}}", -2)
+	return
+
+Alt & b::
+	Send \bigcup
+	return
+	
+Alt & n::
+	Send \varnothing
+	return
+	
+Alt & l::
+	Send \limits_{{}{}}
+	Send {Left}
+	return
+	
+Alt & e::
+	Send \varepsilon
+	return
+
+^8::
+	Send {^}*
+	return
+Alt & u::
+	wrap_selected_text("\underset{{}\mbox{{}{}}{}}{{}", "{}}", -1)
+	return
+Alt & r::
+	Send \Rightarrow
+	return 
+Alt & d::
+	Send \delta
 	return
