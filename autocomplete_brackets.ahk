@@ -44,7 +44,7 @@ get_selection(cut:=false) {
 	ClipSaved := ""
 	return ret
 }
-
+git
 wrap_selected_text(before, after, offset:=-100, length:=-1) {
 	if (offset == -100)
 		offset := -StrLen(after)
@@ -144,6 +144,12 @@ $"::
 		wrap_selected_text("""", """")
 	else
 		Send Э
+	return	
+$'::
+	if layout_is_good()
+		wrap_selected_text("'", "'")
+	else
+		Send э
 	return
 
 $)::
@@ -208,3 +214,8 @@ Alt & r::
 Alt & d::
 	Send \delta
 	return
+^J::
+	out := ""
+	Input out, L2 V,"j ",k
+	MsgBox %out%
+	return 
