@@ -37,13 +37,13 @@ _wrap_selected_text(bra, ket, kwargs:=0) {
 	offset := kwargs.get("offset", -StrLen(ket))
 	length := StrLen(StrReplace(get_selection(), "`r"))
 	if (not length){
-		SendInput %bra%%ket%
+		SendRaw %bra%%ket% 
 		move_cursor(offset)
 	} else {
-		SendInput {Left}
-		SendInput %bra%
+		move_cursor(-1)
+		SendRaw %bra%
 		move_cursor(length)
-		SendInput %ket%
+		SendRaw %ket%
 		move_cursor(offset)
 		SendInput +{left %length%}		; select text again
 	}
@@ -60,10 +60,10 @@ closing_is_present(bra, ket){
 	space := "᠎"				; zero width space
 	;space := " "
 	SendInput %space%
-	SendInput {Right}
+	move_cursor(1)
 	SendInput +{Left}+{Home}			; because just SendInputing +{Home} bugs at the end of the line
 	str := get_selection()
-	SendInput {Right}
+	move_cursor(1)
 	
 	length := StrLen(str)
 	txt_arr := StrSplit(str)
@@ -72,7 +72,7 @@ closing_is_present(bra, ket){
 		SendInput {Backspace}
 		return false
 	}
-	SendInput {Left}
+	move_cursor(-1)
 	SendInput {Backspace}
 	if (txt_arr[length] != ket)
 		return false
@@ -82,7 +82,6 @@ closing_is_present(bra, ket){
 			counter += 1
 		else if (txt_arr[length - A_index - 1] == bra)
 			counter -= 1
-		; SendInput %counter%		; debug
 		if (counter < 0)
 			return true
 	}
@@ -92,9 +91,6 @@ closing_is_present(bra, ket){
 _print_closing_bracket(bra, ket){
 	if closing_is_present(bra, ket)
 		move_cursor(1)
-	else {
-		if (ket == "}")
-			ket := "{}}"
-		SendInput %ket%
-	}	
+	else
+		SendRaw %ket%
 }

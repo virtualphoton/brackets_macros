@@ -3,18 +3,23 @@
 #include scripts/debug.ahk
 #include main.ahk
 
-RU_LANG_CODE := 0x4190419 
-
+force_release(key){
+	Send {%key% down}
+	Send {%key% up}	
+}
 wrap_selected_text(hotkey){
 	global brackets_start
 	key := delete_dollar(hotkey)
 	_wrap(brackets_start[key]*)
+	force_release("shift")
+	force_release("ctrl")
 }
 
 print_closing_bracket(hotkey){
 	global brackets_end
 	key := delete_dollar(hotkey)
 	_print_closing(brackets_end[key]*)
+	force_release("shift")
 }
 
 delete_dollar(str){
@@ -28,7 +33,7 @@ _wrap(bra, ket, kwargs:=0){
 	ru_char := kwargs.get("ru_char", "")
 	if (ru_char == "" or layout_is_good()){
 		has_wrapped_sth := _wrap_selected_text(bra, ket, kwargs)
-		wait_for_backspace(has_wrapped_sth)
+		wait_for_backspace(has_wrapped_sth, kwargs)
 	} else
 		SendInput %ru_char%
 }
@@ -53,7 +58,7 @@ layout_is_good() {
 	return InputLocaleID != RU_LANG_CODE 
 }
 
-wait_for_backspace(was_wrapped){
+wait_for_backspace(was_wrapped, kwargs){
 	; waits for backspace to be pressed after brackets
 	; if it was pressed (and text was not wrapped), inserted brackets will be deleted
 
@@ -69,7 +74,11 @@ wait_for_backspace(was_wrapped){
 	
 	MouseGetPos xpos1,ypos1
 	; if user has moved mouse, then they supposedly don't want to erase brackets
-	if (xpos = xpos1 and ypos == ypos1)
-		if (ErrorLevel == "EndKey:Backspace")
-			SendInput {Delete}
+	if (xpos == xpos1 and ypos == ypos1)
+		if (ErrorLevel == "EndKey:Backspace"){
+			del_left := kwargs.get("erase_left", 1) - 1
+			del_right := kwargs.get("erase_right", 1)
+			SendInput {Delete %del_right%}
+			SendInput {Backspace %del_left%}
+		}
 }
