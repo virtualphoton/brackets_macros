@@ -1,0 +1,11 @@
+$"::
+$$::
+$'::
+$(::
+$[::
+$^[::
+$^\::
+${::
+$|::
+	wrap_selected_text(A_ThisHotkey)
+	return
