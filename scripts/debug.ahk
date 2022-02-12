@@ -14,7 +14,7 @@ class Timer {
 	}
 	show_time(){
 		dt := A_TickCount - this.last_time
-		MsgBox %dt%
+		msg(dt)
 		this.tick()
 	}
 }

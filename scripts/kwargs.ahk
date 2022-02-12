@@ -1,7 +1,7 @@
 __get(this, key, default:=""){
-			if this.haskey(key)
-				return this[key]
-			return default
+	if this.haskey(key)
+		return this[key]
+	return default
 }
 KwargsObj(kwargs_obj){
 	if (kwargs_obj == 0)

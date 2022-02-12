@@ -36,5 +36,5 @@ if regexMatch(A_ScriptFullPath, ".*main\.ahk$"){
 	create_wrappers(brackets_start)
 	create_ends(brackets_end)
 	create_shortcuts(shortcuts)
-	Run, auxiliary.ahk
+	Run, scripts/auxiliary.ahk
 }
