@@ -2,9 +2,9 @@
 #SingleInstance Force
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-#Warn
+; #Warn
 
-CLIPBOARD_TIMEOUT := 0.05
+CLIPBOARD_TIMEOUT := 0.1
 RU_LANG_CODE := 0x4190419
 turned_off_ids := {}
 
@@ -197,7 +197,7 @@ _wrap(bra, ket, kwargs:=0){
 		SendInput %ru_char%
 }
 delete_dollar(str){
-	if (SubStr(str, 1, 1) == "$")
+	if (SubStr(str, 1, 1) == "$" and str != "$")
 		return SubStr(str, 2)		 ;omitting '$' sign
 	return str
 }
@@ -230,6 +230,7 @@ brackets_start := {0:0						; for the sake of all keys being aligned
 	,"[": 	["[", "]", {"ru_char":"х"}]
 	,"""":	["""", """", {"ru_char":"Э"}]
 	,"'": 	["'", "'", {"ru_char":"э"}]
+	,"$":	["$", "$"]
 	,"^\":	["\(", "\)", {"offset":-2}]
 	,"^[":	["\{{}", "\{}}", {"offset":-2}]}
 brackets_end := {0:0
@@ -253,6 +254,7 @@ $"::
 $'::
 ^\::
 ^[::
+$$::
 	wrap(A_ThisHotkey)
 	return
 
@@ -263,24 +265,16 @@ $}::
 	return
 
 ; Shortcuts for anki
+print(text){
+	SendInput %text%
+}
 !b::
 !n::
 !e::
 !r::
 !d::
 ^8::
-	SendInput .shortcuts[A_ThisHotkey]
-	return
-	
-Alt & l::
-	Send \limits_{{}{}}
-	Send {Left}
-	return
-	
-
-
-Alt & u::
-	wrap_selected_text("\underset{{}\mbox{{}{}}{}}{{}", "{}}", -1)
+	print(shortcuts[A_ThisHotkey])
 	return
 
 ^J::
