@@ -8,13 +8,13 @@ SetWorkingDir %A_ScriptDir%
 brackets_start := {0:0						; for the sake of all keys being aligned
 	,"(": 	["(", ")"]
 	,"|": 	["|", "|"]
-	,"{": 	["{", "}", {"ru_char":"Х", "offset":-1}]
+	,"{": 	["{", "}", {"ru_char":"Х"}]
 	,"[": 	["[", "]", {"ru_char":"х"}]
 	,"""":	["""", """", {"ru_char":"Э"}]
 	,"'": 	["'", "'", {"ru_char":"э"}]
 	,"$":	["$", "$"]
-	,"^\":	["\(", "\)", {"offset":-2}]
-	,"^[":	["\{", "\}", {"offset":-2, "erase_left":2, "erase_right":2}] }
+	,"^\":	["\(", "\)"]
+	,"^[":	["\{", "\}"] }
 	
 brackets_end := {0:0
 	,")": 	["(", ")"]
