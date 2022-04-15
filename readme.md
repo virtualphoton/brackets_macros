@@ -23,8 +23,6 @@ List of brackets can be set in `main.ahk`:
 - `brackets_end` - to skip closing brackets instead of printing them (as described earlier).
 Same parameters as in previous: unclosed `opening_bracket` - will be searched.
 
-To run script, run `main.ahk`. It will compute files containing lists of hotkeys and run
-another script for them - `auxiliary.ahk`. If new shortcuts are added/deleted you should relaunch `main.ahk`.
-If only their parameters are changed, you can reload just `auxiliary.ahk` 
+To run script, run `main.ahk`.
 
-To suspend/unsuspend script, press `Ctrl+J`
+To temporarily turn the script off (or turn it on after that), press `Ctrl+J`
